@@ -29,4 +29,6 @@ jobs:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
         file: ./downloads/*
         tag: ${{ github.ref }}
+        file_glob: true
+        overwrite: true
 
