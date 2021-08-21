@@ -107,7 +107,11 @@ driver.close()
 
 print("Closing driver")
 for downloadItem in os.listdir(downloadDir):
-    print("Downloaded: " + downloadItem)
+    renamed = downloadItem.replace("PRE-ALPHA.", "")
+    renamed = renamed.replace("-unstable", "")
+    renamed = renamed.replace("."+tag, "")
+    os.rename(downloadItem, renamed)
+    print("Downloaded: " + downloadItem + ", renamed to: " + renamed)
 
 if __name__ == '__main__':
     pass
