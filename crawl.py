@@ -62,7 +62,14 @@ time.sleep(2)
 print("30%")
 downloadListSize = len(driver.find_elements_by_xpath("//a[@class='button download_btn']"))
 percentage = 30
+i = -1
 for x in driver.find_elements_by_xpath("//a[@class='button download_btn']"):
+    i += 1
+    percentage += int(40 / downloadListSize)
+    version = str(driver.find_elements_by_class_name("upload")[i].find_element_by_class_name("version_name").text).split(" ")[1]
+    if not sys.argv[1][1:] == version:
+        downloadListSize -= 1
+        continue
     x.click()
     time.sleep(2)
     try:
@@ -70,16 +77,25 @@ for x in driver.find_elements_by_xpath("//a[@class='button download_btn']"):
     except selenium.common.exceptions.NoSuchElementException:
         pass
     time.sleep(1)
-    percentage += 40 / downloadListSize
+
     print(str(percentage) + "%")
+
 
 while len(os.listdir(downloadDir)) != downloadListSize:
     time.sleep(1)
 
+downloading = True
+while downloading:
+    downloading = False
+    for file in os.listdir(downloadDir):
+        if file.endswith(".crdownload"):
+            downloading = True
+            break
+
 print("75%")
 os.chdir(downloadDir)
 for downloadItem in os.listdir(downloadDir):
-    if sys.argv[1] not in downloadItem:
+    if sys.argv[1][1:] not in downloadItem:
         print("Deleting: " + downloadItem)
         os.remove(downloadItem)
 
@@ -91,7 +107,7 @@ for file in glob.glob("*.zip"):
     zip_ref = zipfile.ZipFile(file, 'r')
     zip_ref.extractall(owd)
     zip_ref.close()
-    percentage += 20 / downloadListSize
+    percentage += int(20 / downloadListSize)
     print(str(percentage) + "%")
 
 time.sleep(2)
