@@ -22,6 +22,7 @@ jobs:
        ls /usr/bin/google-chrome
        pip3 install -r requirements.txt
        python3 crawl.py ${{ github.ref }} headless
+       tree
     - name: Set env
       run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
 
@@ -29,6 +30,6 @@ jobs:
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ secrets.GITHUB_TOKEN }}
-        path: download
+        file: download/*
         tag: ${{ github.ref }}
 
