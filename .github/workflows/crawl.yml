@@ -1,6 +1,7 @@
 name: Fetch
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - 'v*'
@@ -15,6 +16,9 @@ jobs:
       uses: actions/setup-java@v1
       with:
         java-version: 16
+        
+    - name: Download
+      run: python3 crawl.py
     - name: Set env
       run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
 
