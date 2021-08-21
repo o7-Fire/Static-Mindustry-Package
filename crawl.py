@@ -101,16 +101,6 @@ while downloading:
 
 print("75%")
 os.chdir(downloadDir)
-percentage = 75
-globSize = len(glob.glob("*.zip"))
-for file in glob.glob("*.zip"):
-    print("Extracting " + str(file))
-    zip_ref = zipfile.ZipFile(file, 'r')
-    zip_ref.extractall(owd)
-    zip_ref.close()
-    percentage += int(20 / downloadListSize)
-    print(str(percentage) + "%")
-
 time.sleep(2)
 print("95%")
 driver.close()
