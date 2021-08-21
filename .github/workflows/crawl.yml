@@ -18,7 +18,9 @@ jobs:
         java-version: 16
         
     - name: Download
-      run: python3 crawl.py
+      run: |
+       pip3 install -r requirements.txt
+       python3 crawl.py
     - name: Set env
       run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
 
