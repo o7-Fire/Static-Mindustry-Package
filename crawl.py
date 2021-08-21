@@ -111,7 +111,7 @@ for downloadItem in os.listdir(downloadDir):
     renamed = renamed.lower()
     renamed = renamed.replace("[android]", "")
     renamed = renamed.replace("-unstable", "")
-    renamed = renamed.replace("[" + tag + "]", "")
+    renamed = renamed.replace("[v" + tag + "]", "")
     os.rename(downloadItem, renamed)
     print("Downloaded: " + downloadItem + ", renamed to: " + renamed)
 
