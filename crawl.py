@@ -1,1 +1,91 @@
-print("H")
+from typing import List
+
+import selenium.common.exceptions
+from bs4 import BeautifulSoup
+from selenium import webdriver
+from six.moves.urllib.request import urlretrieve
+import glob
+import os
+import re
+import sys
+import time
+import zipfile
+
+done = False
+owd = os.getcwd()
+downloadDir = owd + "/downloads"
+try:
+    os.mkdir(downloadDir)
+except FileExistsError:
+    pass
+
+print("Download Dir:" + downloadDir)
+
+for downloadItem in os.listdir(downloadDir):
+    print("Removing: " + downloadItem)
+    os.remove(downloadDir+"/"+downloadItem)
+
+chromeOptions = webdriver.ChromeOptions()
+prefs = {"profile.default_content_settings.popups": 0,
+         "download.default_directory": downloadDir,
+         "safebrowsing.enabled": "false"}
+chromeOptions.add_experimental_option("prefs", prefs)
+
+
+if os.path.isfile('chromedriver'):
+    locationString = 'chromedriver'
+else:
+    response = urlretrieve('https://chromedriver.storage.googleapis.com/93.0.4577.15/chromedriver_linux64.zip',
+                           'chromedriver.zip')
+    print("Downloading Chromedriver because no Chromedriver exist")
+    zip_ref = zipfile.ZipFile("chromedriver.zip", 'r')
+    zip_ref.extractall(owd)
+    zip_ref.close()
+    locationString = 'chromedriver'
+    os.remove("chromedriver.zip")
+
+driver = webdriver.Chrome(executable_path=locationString, options=chromeOptions)
+driver.set_page_load_timeout(600)
+
+siteString = "https://anuke.itch.io/mindustry"
+
+driver.get(siteString)
+
+driver.find_element_by_xpath("//a[@class='button buy_btn']").click()
+time.sleep(2)
+driver.find_element_by_xpath("//a[@class='direct_download_btn']").click()
+time.sleep(2)
+downloadListSize = len(driver.find_elements_by_xpath("//a[@class='button download_btn']"))
+for x in driver.find_elements_by_xpath("//a[@class='button download_btn']"):
+    x.click()
+    time.sleep(2)
+    try:
+        driver.find_element_by_xpath('//*[@id="lightbox_container"]/div/div/button').click()
+    except selenium.common.exceptions.NoSuchElementException:
+        pass
+    time.sleep(1)
+
+while len(os.listdir(downloadDir)) != downloadListSize:
+    time.sleep(1)
+
+for downloadItem in os.listdir(downloadDir):
+    if sys.argv[1] not in downloadItem:
+        print("Deleting: " + downloadItem)
+        os.remove(downloadItem)
+
+os.chdir(downloadDir)
+for file in glob.glob("*.zip"):
+    print("Extracting " + str(file))
+    zip_ref = zipfile.ZipFile(file, 'r')
+    zip_ref.extractall(owd)
+    zip_ref.close()
+
+time.sleep(2)
+
+driver.close()
+print("Closing driver")
+for downloadItem in os.listdir(downloadDir):
+    print("Downloaded: " + downloadItem)
+
+if __name__ == '__main__':
+    pass
