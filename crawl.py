@@ -22,11 +22,12 @@ except FileExistsError:
 print(sys.argv)
 print("Download Dir:" + downloadDir)
 tag = sys.argv[1]
+print(tag)
 if tag.startswith("refs/tags"):
     tag = tag[10:]
 if not tag.startswith("v"):
     raise Exception("Not start with v")
-tag = tag[1:1]
+tag = tag[1:]
 print(tag)
 for downloadItem in os.listdir(downloadDir):
     print("Removing: " + downloadItem)
