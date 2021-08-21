@@ -107,9 +107,11 @@ driver.close()
 
 print("Closing driver")
 for downloadItem in os.listdir(downloadDir):
-    renamed = downloadItem.replace("PRE-ALPHA.", "")
+    renamed = downloadItem
+    renamed = renamed.lower()
+    renamed = renamed.replace("[android]", "")
     renamed = renamed.replace("-unstable", "")
-    renamed = renamed.replace("."+tag, "")
+    renamed = renamed.replace("["+tag, "]")
     os.rename(downloadItem, renamed)
     print("Downloaded: " + downloadItem + ", renamed to: " + renamed)
 
