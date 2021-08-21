@@ -21,7 +21,13 @@ except FileExistsError:
 
 print(sys.argv)
 print("Download Dir:" + downloadDir)
-
+tag = sys.argv[1]
+if tag.startswith("refs/tags"):
+    tag = tag[10:]
+if not tag.startswith("v"):
+    raise Exception("Not start with v")
+tag = tag[1:1]
+print(tag)
 for downloadItem in os.listdir(downloadDir):
     print("Removing: " + downloadItem)
     os.remove(downloadDir+"/"+downloadItem)
@@ -67,7 +73,7 @@ for x in driver.find_elements_by_xpath("//a[@class='button download_btn']"):
     i += 1
     percentage += int(40 / downloadListSize)
     version = str(driver.find_elements_by_class_name("upload")[i].find_element_by_class_name("version_name").text).split(" ")[1]
-    if not sys.argv[1][1:] == version:
+    if not tag == version:
         downloadListSize -= 1
         continue
     x.click()
@@ -95,7 +101,7 @@ while downloading:
 print("75%")
 os.chdir(downloadDir)
 for downloadItem in os.listdir(downloadDir):
-    if sys.argv[1][1:] not in downloadItem:
+    if tag not in downloadItem:
         print("Deleting: " + downloadItem)
         os.remove(downloadItem)
 
