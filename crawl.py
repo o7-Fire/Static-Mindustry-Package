@@ -19,6 +19,7 @@ try:
 except FileExistsError:
     pass
 
+print(sys.argv)
 print("Download Dir:" + downloadDir)
 
 for downloadItem in os.listdir(downloadDir):
@@ -30,7 +31,9 @@ prefs = {"profile.default_content_settings.popups": 0,
          "download.default_directory": downloadDir,
          "safebrowsing.enabled": "false"}
 chromeOptions.add_experimental_option("prefs", prefs)
-
+if len(sys.argv) > 2 and sys.argv[2] == "headless":
+    chromeOptions.add_argument("--no-sandbox")#linux only
+    chromeOptions.add_argument("--headless")
 
 if os.path.isfile('chromedriver'):
     locationString = 'chromedriver'
