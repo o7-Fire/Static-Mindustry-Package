@@ -101,13 +101,7 @@ while downloading:
 
 print("75%")
 os.chdir(downloadDir)
-for downloadItem in os.listdir(downloadDir):
-    if tag not in downloadItem:
-        print("Deleting: " + downloadItem)
-        os.remove(downloadItem)
-
-print("80%")
-percentage = 80
+percentage = 75
 globSize = len(glob.glob("*.zip"))
 for file in glob.glob("*.zip"):
     print("Extracting " + str(file))
@@ -118,7 +112,7 @@ for file in glob.glob("*.zip"):
     print(str(percentage) + "%")
 
 time.sleep(2)
-print("100%")
+print("95%")
 driver.close()
 
 print("Closing driver")
