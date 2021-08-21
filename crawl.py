@@ -31,7 +31,7 @@ tag = tag[1:]
 print(tag)
 for downloadItem in os.listdir(downloadDir):
     print("Removing: " + downloadItem)
-    os.remove(downloadDir+"/"+downloadItem)
+    os.remove(downloadDir + "/" + downloadItem)
 
 chromeOptions = webdriver.ChromeOptions()
 prefs = {"profile.default_content_settings.popups": 0,
@@ -39,7 +39,7 @@ prefs = {"profile.default_content_settings.popups": 0,
          "safebrowsing.enabled": "false"}
 chromeOptions.add_experimental_option("prefs", prefs)
 if len(sys.argv) > 2 and sys.argv[2] == "headless":
-    #chromeOptions.add_argument("--no-sandbox")#linux only
+    # chromeOptions.add_argument("--no-sandbox")#linux only
     chromeOptions.add_argument("--headless")
 
 if os.path.isfile('chromedriver'):
@@ -73,7 +73,8 @@ i = -1
 for x in driver.find_elements_by_xpath("//a[@class='button download_btn']"):
     i += 1
     percentage += int(40 / downloadListSize)
-    version = str(driver.find_elements_by_class_name("upload")[i].find_element_by_class_name("version_name").text).split(" ")[1]
+    version = \
+    str(driver.find_elements_by_class_name("upload")[i].find_element_by_class_name("version_name").text).split(" ")[1]
     if not tag == version:
         downloadListSize -= 1
         continue
@@ -86,7 +87,6 @@ for x in driver.find_elements_by_xpath("//a[@class='button download_btn']"):
     time.sleep(1)
 
     print(str(percentage) + "%")
-
 
 while len(os.listdir(downloadDir)) != downloadListSize:
     time.sleep(1)
@@ -111,7 +111,7 @@ for downloadItem in os.listdir(downloadDir):
     renamed = renamed.lower()
     renamed = renamed.replace("[android]", "")
     renamed = renamed.replace("-unstable", "")
-    renamed = renamed.replace("["+tag, "]")
+    renamed = renamed.replace("[" + tag + "]", "")
     os.rename(downloadItem, renamed)
     print("Downloaded: " + downloadItem + ", renamed to: " + renamed)
 
