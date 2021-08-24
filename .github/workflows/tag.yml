@@ -36,7 +36,7 @@ jobs:
           echo RELEASE_VERSION=$a >> $GITHUB_ENV
           echo ${RELEASE_VERSION}
           echo "${RELEASE_VERSION}"
-          echo "${ RELEASE_VERSION }"
+          echo "$RELEASE_VERSION"
           export RELEASE_VERSION=$($a)
           
         
