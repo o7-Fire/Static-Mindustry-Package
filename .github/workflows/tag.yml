@@ -34,6 +34,4 @@ jobs:
           git config --global user.name "no"
           export a=$(git ls-remote --tags --refs --sort="version:refname" git://github.com/git/git.git | awk -F/ 'END{print$NF}')
           git tag $a
-          git add .
-          git commit -m "Meh"
           git push origin --tags
