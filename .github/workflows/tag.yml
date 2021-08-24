@@ -34,11 +34,6 @@ jobs:
           git config --global user.name "no"
           export a=$(git ls-remote --tags --refs --sort="version:refname" git://github.com/Anuken/Mindustry.git | awk -F/ 'END{print$NF}')
           echo "RELEASE_VERSION=$a" >> $GITHUB_ENV
-          echo ${RELEASE_VERSION}
-          echo "${RELEASE_VERSION}"
-          echo "$RELEASE_VERSION"
-          export RELEASE_VERSION=$a
-          git tag $a
           
         
       - name: Download
