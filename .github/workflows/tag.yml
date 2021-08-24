@@ -34,7 +34,11 @@ jobs:
           git config --global user.name "no"
           export a=$(git ls-remote --tags --refs --sort="version:refname" git://github.com/Anuken/Mindustry.git | awk -F/ 'END{print$NF}')
           echo RELEASE_VERSION=$a >> $GITHUB_ENV
-
+          echo ${RELEASE_VERSION}
+          echo "${RELEASE_VERSION}"
+          echo "${{ RELEASE_VERSION }}"
+          export RELEASE_VERSION=$($a)
+          
         
       - name: Download
         run: |
@@ -42,15 +46,15 @@ jobs:
          pip3 install -r requirements.txt
          python3 crawl.py ${RELEASE_VERSION} headless
          tree
-         
+     
       - name: Create Release
         id: create_release
         uses: actions/create-release@latest
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${RELEASE_VERSION}
-          release_name: Release ${RELEASE_VERSION}
+          tag_name: ${{ RELEASE_VERSION }}
+          release_name: Release ${{ RELEASE_VERSION }}
           body: ${RELEASE_VERSION}
           draft: false
           prerelease: false
@@ -60,6 +64,6 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ./downloads/*
-          tag: refs/tags/${RELEASE_VERSION}
+          tag: refs/tags/${{ RELEASE_VERSION }}
           file_glob: true
           overwrite: true
