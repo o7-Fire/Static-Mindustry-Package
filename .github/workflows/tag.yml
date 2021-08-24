@@ -32,6 +32,6 @@ jobs:
         run: |
           git config --global user.email "<>"
           git config --global user.name "no"
-          export a=$(git ls-remote --tags --refs --sort="version:refname" git://github.com/git/git.git | awk -F/ 'END{print$NF}')
+          export a=$(git ls-remote --tags --refs --sort="version:refname" git://github.com/Anuken/Mindustry.git | awk -F/ 'END{print$NF}')
           git tag $a
           git push origin --tags
