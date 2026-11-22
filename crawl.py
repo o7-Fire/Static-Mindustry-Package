@@ -63,14 +63,17 @@ def main():
 
     try:
         driver.get("https://anuke.itch.io/mindustry")
+        print("10%")
         wait_click(driver, By.CSS_SELECTOR, "a.button.buy_btn, a.buy_btn")
         time.sleep(2)
+        print("20%")
 
         try:
             wait_click(driver, By.CSS_SELECTOR, "a.direct_download_btn, a[data-label='no_thanks']")
         except TimeoutException:
             wait_click(driver, By.LINK_TEXT, "No thanks, just take me to the downloads")
         time.sleep(2)
+        print("30%")
 
         WebDriverWait(driver, 30).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, ".upload, a.download_btn"))
@@ -79,8 +82,11 @@ def main():
         uploads = driver.find_elements(By.CSS_SELECTOR, ".upload")
         buttons = driver.find_elements(By.CSS_SELECTOR, "a.button.download_btn, a.download_btn")
         expected = 0
+        percentage = 30
+        step = int(40 / max(len(buttons), 1))
 
         for i, button in enumerate(buttons):
+            percentage += step
             version = ""
             if i < len(uploads):
                 try:
@@ -92,6 +98,7 @@ def main():
                     pass
 
             if version and version != tag:
+                print(f"{percentage}%")
                 continue
 
             driver.execute_script("arguments[0].click();", button)
@@ -104,6 +111,7 @@ def main():
             except NoSuchElementException:
                 pass
             time.sleep(1)
+            print(f"{percentage}%")
 
         if expected == 0:
             expected = len(buttons)
@@ -116,6 +124,9 @@ def main():
             time.sleep(1)
         else:
             raise TimeoutException("Timed out waiting for downloads")
+        print("75%")
+        time.sleep(2)
+        print("95%")
     finally:
         driver.quit()
 
