@@ -72,13 +72,20 @@ def main():
 
     try:
         driver.get("https://anuke.itch.io/mindustry")
-        wait_click(driver, By.CSS_SELECTOR, "a.button.buy_btn, a.buy_btn")
-        time.sleep(2)
+        try:
+            wait_click(driver, By.CSS_SELECTOR, "a.button.buy_btn, a.buy_btn", timeout=20)
+            time.sleep(2)
+        except TimeoutException:
+            driver.get("https://anuke.itch.io/mindustry/purchase")
+            time.sleep(2)
 
         try:
-            wait_click(driver, By.CSS_SELECTOR, "a.direct_download_btn, a[data-label='no_thanks']")
+            wait_click(driver, By.CSS_SELECTOR, "a.direct_download_btn, a[data-label='no_thanks']", timeout=20)
         except TimeoutException:
-            wait_click(driver, By.LINK_TEXT, "No thanks, just take me to the downloads")
+            try:
+                wait_click(driver, By.PARTIAL_LINK_TEXT, "No thanks", timeout=10)
+            except TimeoutException:
+                pass
         time.sleep(2)
 
         WebDriverWait(driver, 30).until(
