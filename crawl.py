@@ -1,120 +1,130 @@
-from typing import List
-
-import selenium.common.exceptions
-from bs4 import BeautifulSoup
-from selenium import webdriver
-from six.moves.urllib.request import urlretrieve
-import glob
 import os
-import re
 import sys
 import time
-import zipfile
 
-done = False
-owd = os.getcwd()
-downloadDir = owd + "/downloads"
-try:
-    os.mkdir(downloadDir)
-except FileExistsError:
-    pass
+from selenium import webdriver
+from selenium.common.exceptions import NoSuchElementException, TimeoutException
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 
-print(sys.argv)
-print("Download Dir:" + downloadDir)
-tag = sys.argv[1]
-print(tag)
-if tag.startswith("refs/tags"):
-    tag = tag[10:]
-if not tag.startswith("v"):
-    raise Exception("Not start with v")
-tag = tag[1:]
-print(tag)
-for downloadItem in os.listdir(downloadDir):
-    print("Removing: " + downloadItem)
-    os.remove(downloadDir + "/" + downloadItem)
 
-chromeOptions = webdriver.ChromeOptions()
-prefs = {"profile.default_content_settings.popups": 0,
-         "download.default_directory": downloadDir,
-         "safebrowsing.enabled": "false"}
-chromeOptions.add_experimental_option("prefs", prefs)
-if len(sys.argv) > 2 and sys.argv[2] == "headless":
-    # chromeOptions.add_argument("--no-sandbox")#linux only
-    chromeOptions.add_argument("--headless")
+def create_driver(download_dir, headless):
+    options = webdriver.ChromeOptions()
+    prefs = {
+        "download.default_directory": download_dir,
+        "download.prompt_for_download": False,
+        "safebrowsing.enabled": False,
+    }
+    options.add_experimental_option("prefs", prefs)
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--window-size=1920,1080")
+    if headless:
+        options.add_argument("--headless=new")
+    return webdriver.Chrome(options=options)
 
-if os.path.isfile('chromedriver'):
-    locationString = 'chromedriver'
-else:
-    response = urlretrieve('https://chromedriver.storage.googleapis.com/93.0.4577.15/chromedriver_linux64.zip',
-                           'chromedriver.zip')
-    print("Downloading Chromedriver because no Chromedriver exist")
-    zip_ref = zipfile.ZipFile("chromedriver.zip", 'r')
-    zip_ref.extractall(owd)
-    zip_ref.close()
-    locationString = 'chromedriver'
-    os.remove("chromedriver.zip")
 
-driver = webdriver.Chrome(executable_path=locationString, options=chromeOptions)
-driver.set_page_load_timeout(600)
+def wait_click(driver, by, value, timeout=30):
+    end = time.time() + timeout
+    while time.time() < end:
+        elements = driver.find_elements(by, value)
+        for element in elements:
+            if element.is_displayed():
+                driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", element)
+                driver.execute_script("arguments[0].click();", element)
+                return element
+        time.sleep(0.5)
+    raise TimeoutException(f"Clickable element not found: {value}")
 
-siteString = "https://anuke.itch.io/mindustry"
 
-driver.get(siteString)
-print("10%")
-driver.find_element_by_xpath("//a[@class='button buy_btn']").click()
-time.sleep(2)
-print("20%")
-driver.find_element_by_xpath("//a[@class='direct_download_btn']").click()
-time.sleep(2)
-print("30%")
-downloadListSize = len(driver.find_elements_by_xpath("//a[@class='button download_btn']"))
-percentage = 30
-i = -1
-for x in driver.find_elements_by_xpath("//a[@class='button download_btn']"):
-    i += 1
-    percentage += int(40 / downloadListSize)
-    version = \
-    str(driver.find_elements_by_class_name("upload")[i].find_element_by_class_name("version_name").text).split(" ")[1]
-    if not tag == version:
-        downloadListSize -= 1
-        continue
-    x.click()
-    time.sleep(2)
+def normalize_tag(tag):
+    if tag.startswith("refs/tags/"):
+        tag = tag[len("refs/tags/") :]
+    if tag.startswith("v"):
+        tag = tag[1:]
+    return tag
+
+
+def main():
+    if len(sys.argv) < 2:
+        raise SystemExit("Missing tag argument")
+
+    download_dir = os.path.join(os.getcwd(), "downloads")
+    os.makedirs(download_dir, exist_ok=True)
+    tag = normalize_tag(sys.argv[1])
+    headless = len(sys.argv) > 2 and sys.argv[2] == "headless"
+
+    for item in os.listdir(download_dir):
+        os.remove(os.path.join(download_dir, item))
+
+    driver = create_driver(download_dir, headless)
+    driver.set_page_load_timeout(600)
+
     try:
-        driver.find_element_by_xpath('//*[@id="lightbox_container"]/div/div/button').click()
-    except selenium.common.exceptions.NoSuchElementException:
-        pass
-    time.sleep(1)
+        driver.get("https://anuke.itch.io/mindustry")
+        wait_click(driver, By.CSS_SELECTOR, "a.button.buy_btn, a.buy_btn")
+        time.sleep(2)
 
-    print(str(percentage) + "%")
+        try:
+            wait_click(driver, By.CSS_SELECTOR, "a.direct_download_btn, a[data-label='no_thanks']")
+        except TimeoutException:
+            wait_click(driver, By.LINK_TEXT, "No thanks, just take me to the downloads")
+        time.sleep(2)
 
-while len(os.listdir(downloadDir)) != downloadListSize:
-    time.sleep(1)
+        WebDriverWait(driver, 30).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, ".upload, a.download_btn"))
+        )
 
-downloading = True
-while downloading:
-    downloading = False
-    for file in os.listdir(downloadDir):
-        if file.endswith(".crdownload"):
-            downloading = True
-            break
+        uploads = driver.find_elements(By.CSS_SELECTOR, ".upload")
+        buttons = driver.find_elements(By.CSS_SELECTOR, "a.button.download_btn, a.download_btn")
+        expected = 0
 
-print("75%")
-os.chdir(downloadDir)
-time.sleep(2)
-print("95%")
-driver.close()
+        for i, button in enumerate(buttons):
+            version = ""
+            if i < len(uploads):
+                try:
+                    version_text = uploads[i].find_element(By.CSS_SELECTOR, ".version_name").text
+                    parts = version_text.split()
+                    if parts:
+                        version = parts[-1]
+                except NoSuchElementException:
+                    pass
 
-print("Closing driver")
-for downloadItem in os.listdir(downloadDir):
-    renamed = downloadItem
-    renamed = renamed.lower()
-    renamed = renamed.replace("[android]", "")
-    renamed = renamed.replace("[pre-alpha]", "")
-    renamed = renamed.replace("-unstable", "")
-    renamed = renamed.replace("[v" + tag + "]", "")
-    os.rename(downloadItem, renamed)
-    print("Downloaded: " + downloadItem + ", renamed to: " + renamed)
+            if version and version != tag:
+                continue
 
-if __name__ == '__main__':
-    pass
+            driver.execute_script("arguments[0].click();", button)
+            expected += 1
+            time.sleep(2)
+            try:
+                dismiss = driver.find_element(By.CSS_SELECTOR, "#lightbox_container .close_btn, #lightbox_container button")
+                if dismiss.is_displayed():
+                    dismiss.click()
+            except NoSuchElementException:
+                pass
+            time.sleep(1)
+
+        if expected == 0:
+            expected = len(buttons)
+
+        deadline = time.time() + 900
+        while time.time() < deadline:
+            files = os.listdir(download_dir)
+            if files and not any(f.endswith(".crdownload") for f in files) and len(files) >= expected:
+                break
+            time.sleep(1)
+        else:
+            raise TimeoutException("Timed out waiting for downloads")
+    finally:
+        driver.quit()
+
+    for name in os.listdir(download_dir):
+        renamed = name.lower().replace("[android]", "").replace("[pre-alpha]", "").replace("-unstable", "").replace(f"[v{tag}]", "")
+        if renamed != name:
+            os.rename(os.path.join(download_dir, name), os.path.join(download_dir, renamed))
+        print(f"Downloaded: {name}, renamed to: {renamed}")
+
+
+if __name__ == "__main__":
+    main()
