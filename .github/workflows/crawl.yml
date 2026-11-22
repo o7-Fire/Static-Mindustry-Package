@@ -34,6 +34,8 @@ jobs:
       - name: Download
         env:
           PYTHONUNBUFFERED: "1"
+          CHROME_PATH: ${{ steps.setup-chrome.outputs.chrome-path }}
+          CHROMEDRIVER_PATH: ${{ steps.setup-chrome.outputs.chromedriver-path }}
         run: python crawl.py ${{ github.ref }} headless
 
       - name: Upload artifacts
