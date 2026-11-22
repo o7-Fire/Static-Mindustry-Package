@@ -27,7 +27,15 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - uses: browser-actions/setup-chrome@v2
+        with:
+          chrome-version: stable
+          install-chromedriver: true
+      - run: chrome --version
+      
       - name: Download
+        env:
+          PYTHONUNBUFFERED: "1"
         run: python crawl.py "$RELEASE_VERSION" headless
 
       - name: Create release
