@@ -28,10 +28,12 @@ jobs:
         run: pip install -r requirements.txt
 
       - uses: browser-actions/setup-chrome@v2
+        id: setup-chrome
         with:
           chrome-version: stable
           install-chromedriver: true
-      - run: chrome --version
+      - run: |
+         ${{ steps.setup-chrome.outputs.chrome-path }} --version
       
       - name: Download
         env:
