@@ -4,6 +4,7 @@ import time
 
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
@@ -22,6 +23,14 @@ def create_driver(download_dir, headless):
     options.add_argument("--window-size=1920,1080")
     if headless:
         options.add_argument("--headless=new")
+
+    chrome_path = os.environ.get("CHROME_PATH")
+    if chrome_path:
+        options.binary_location = chrome_path
+
+    chromedriver_path = os.environ.get("CHROMEDRIVER_PATH")
+    if chromedriver_path:
+        return webdriver.Chrome(service=Service(chromedriver_path), options=options)
     return webdriver.Chrome(options=options)
 
 
@@ -63,17 +72,14 @@ def main():
 
     try:
         driver.get("https://anuke.itch.io/mindustry")
-        print("10%")
         wait_click(driver, By.CSS_SELECTOR, "a.button.buy_btn, a.buy_btn")
         time.sleep(2)
-        print("20%")
 
         try:
             wait_click(driver, By.CSS_SELECTOR, "a.direct_download_btn, a[data-label='no_thanks']")
         except TimeoutException:
             wait_click(driver, By.LINK_TEXT, "No thanks, just take me to the downloads")
         time.sleep(2)
-        print("30%")
 
         WebDriverWait(driver, 30).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, ".upload, a.download_btn"))
@@ -82,11 +88,8 @@ def main():
         uploads = driver.find_elements(By.CSS_SELECTOR, ".upload")
         buttons = driver.find_elements(By.CSS_SELECTOR, "a.button.download_btn, a.download_btn")
         expected = 0
-        percentage = 30
-        step = int(40 / max(len(buttons), 1))
 
         for i, button in enumerate(buttons):
-            percentage += step
             version = ""
             if i < len(uploads):
                 try:
@@ -98,7 +101,6 @@ def main():
                     pass
 
             if version and version != tag:
-                print(f"{percentage}%")
                 continue
 
             driver.execute_script("arguments[0].click();", button)
@@ -111,22 +113,25 @@ def main():
             except NoSuchElementException:
                 pass
             time.sleep(1)
-            print(f"{percentage}%")
 
         if expected == 0:
             expected = len(buttons)
 
+        last_percent = -1
         deadline = time.time() + 900
         while time.time() < deadline:
             files = os.listdir(download_dir)
+            completed = [f for f in files if not f.endswith(".crdownload")]
+            if expected > 0:
+                percent = min(100, int(len(completed) * 100 / expected))
+                if percent != last_percent:
+                    print(f"{percent}%", flush=True)
+                    last_percent = percent
             if files and not any(f.endswith(".crdownload") for f in files) and len(files) >= expected:
                 break
             time.sleep(1)
         else:
             raise TimeoutException("Timed out waiting for downloads")
-        print("75%")
-        time.sleep(2)
-        print("95%")
     finally:
         driver.quit()
 
