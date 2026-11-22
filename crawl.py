@@ -156,17 +156,17 @@ def main():
             if expected > 0:
                 percent = min(100, int(completed * 100 / expected))
                 if percent != last_percent:
-                    print(f"{percent}%", flush=True)
+                    print(f"{percent}% ({completed}/{expected})", flush=True)
                     last_percent = percent
 
-        deadline = time.time() + 900
+        deadline = time.time() + 60
         while time.time() < deadline:
             files = os.listdir(download_dir)
             completed = [f for f in files if not f.endswith(".crdownload")]
             if expected > 0:
                 percent = min(100, int(len(completed) * 100 / expected))
                 if percent != last_percent:
-                    print(f"{percent}%", flush=True)
+                    print(f"{percent}% ({completed}/{expected})", flush=True)
                     last_percent = percent
             if files and not any(f.endswith(".crdownload") for f in files) and len(completed) >= expected:
                 break
