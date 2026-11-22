@@ -16,6 +16,7 @@ def create_driver(download_dir, headless):
         "download.default_directory": download_dir,
         "download.prompt_for_download": False,
         "safebrowsing.enabled": False,
+        "safebrowsing.disable_download_protection": True,
         "profile.default_content_setting_values.automatic_downloads": 1,
     }
     options.add_experimental_option("prefs", prefs)
@@ -31,8 +32,18 @@ def create_driver(download_dir, headless):
 
     chromedriver_path = os.environ.get("CHROMEDRIVER_PATH")
     if chromedriver_path:
-        return webdriver.Chrome(service=Service(chromedriver_path), options=options)
-    return webdriver.Chrome(options=options)
+        driver = webdriver.Chrome(service=Service(chromedriver_path), options=options)
+    else:
+        driver = webdriver.Chrome(options=options)
+
+    try:
+        driver.execute_cdp_cmd("Browser.setDownloadBehavior", {
+            "behavior": "allow",
+            "downloadPath": download_dir,
+        })
+    except Exception:
+        pass
+    return driver
 
 
 def wait_click(driver, by, value, timeout=30):
@@ -152,7 +163,7 @@ def main():
                 if download_started:
                     break
 
-            completed = len([f for f in os.listdir(download_dir) if not f.endswith(".crdownload")])
+            completed = len([f for f in os.listdir(download_dir) if not f.endswith(".crdownload") and not f.lower().endswith((".htm", ".html"))])
             if expected > 0:
                 percent = min(100, int(completed * 100 / expected))
                 if percent != last_percent:
@@ -162,7 +173,7 @@ def main():
         deadline = time.time() + 60
         while time.time() < deadline:
             files = os.listdir(download_dir)
-            completed = [f for f in files if not f.endswith(".crdownload")]
+            completed = [f for f in files if not f.endswith(".crdownload") and not f.lower().endswith((".htm", ".html"))]
             if expected > 0:
                 percent = min(100, int(len(completed) * 100 / expected))
                 if percent != last_percent:
@@ -177,9 +188,15 @@ def main():
         driver.quit()
 
     for name in os.listdir(download_dir):
-        renamed = name.lower().replace("[android]", "").replace("[pre-alpha]", "").replace("-unstable", "").replace(f"[v{tag}]", "")
+        path = os.path.join(download_dir, name)
+        if name.lower().endswith((".htm", ".html")):
+            os.remove(path)
+            continue
+        renamed = name.lower().replace("[pre-alpha]", "").replace("-unstable", "").replace(f"[v{tag}]", "")
+        if "[android]" in name.lower():
+            renamed = "mindustry-android.apk"
         if renamed != name:
-            os.rename(os.path.join(download_dir, name), os.path.join(download_dir, renamed))
+            os.rename(path, os.path.join(download_dir, renamed))
         print(f"Downloaded: {name}, renamed to: {renamed}")
 
 
