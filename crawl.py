@@ -119,33 +119,38 @@ def main():
         started = 0
         last_percent = -1
         for index in targets:
-            if driver.current_url != download_page:
-                driver.get(download_page)
-                WebDriverWait(driver, 30).until(
-                    EC.presence_of_element_located((By.CSS_SELECTOR, ".upload, a.download_btn"))
-                )
-            buttons = driver.find_elements(By.CSS_SELECTOR, "a.button.download_btn, a.download_btn")
-            if index >= len(buttons):
-                continue
-            driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", buttons[index])
-            time.sleep(0.5)
-            driver.execute_script("arguments[0].click();", buttons[index])
-
-            deadline = time.time() + 60
-            while time.time() < deadline:
-                try:
-                    dismiss = driver.find_element(By.CSS_SELECTOR, "#lightbox_container .close_btn, #lightbox_container button")
-                    if dismiss.is_displayed():
-                        dismiss.click()
-                except NoSuchElementException:
-                    pass
-                files = os.listdir(download_dir)
-                current = len([f for f in files if not f.endswith(".crdownload")])
-                in_progress = any(f.endswith(".crdownload") for f in files)
-                if current > started or in_progress:
-                    started = max(started, current)
+            for attempt in range(3):
+                if driver.current_url != download_page:
+                    driver.get(download_page)
+                    WebDriverWait(driver, 30).until(
+                        EC.presence_of_element_located((By.CSS_SELECTOR, ".upload, a.download_btn"))
+                    )
+                buttons = driver.find_elements(By.CSS_SELECTOR, "a.button.download_btn, a.download_btn")
+                if index >= len(buttons):
                     break
-                time.sleep(1)
+                driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", buttons[index])
+                time.sleep(0.5)
+                driver.execute_script("arguments[0].click();", buttons[index])
+
+                deadline = time.time() + 60
+                download_started = False
+                while time.time() < deadline:
+                    try:
+                        dismiss = driver.find_element(By.CSS_SELECTOR, "#lightbox_container .close_btn, #lightbox_container button")
+                        if dismiss.is_displayed():
+                            dismiss.click()
+                    except NoSuchElementException:
+                        pass
+                    files = os.listdir(download_dir)
+                    current = len([f for f in files if not f.endswith(".crdownload")])
+                    in_progress = any(f.endswith(".crdownload") for f in files)
+                    if current > started or in_progress:
+                        started = max(started, current)
+                        download_started = True
+                        break
+                    time.sleep(1)
+                if download_started:
+                    break
 
             completed = len([f for f in os.listdir(download_dir) if not f.endswith(".crdownload")])
             if expected > 0:
