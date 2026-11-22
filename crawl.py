@@ -1,13 +1,43 @@
 import os
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from urllib.parse import unquote, urlparse
 
+import requests
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
+
+
+def filename_from_response(response, url):
+    cd = response.headers.get("content-disposition", "")
+    for part in cd.split(";"):
+        part = part.strip()
+        if part.lower().startswith("filename*="):
+            value = part.split("=", 1)[1].strip().strip('"')
+            if "''" in value:
+                value = value.split("''", 1)[1]
+            return unquote(value)
+        if part.lower().startswith("filename="):
+            return unquote(part.split("=", 1)[1].strip().strip('"'))
+    name = os.path.basename(urlparse(response.url or url).path)
+    return name or "download"
+
+
+def download_file(session, url, download_dir):
+    with session.get(url, stream=True, timeout=120) as response:
+        response.raise_for_status()
+        name = filename_from_response(response, url)
+        path = os.path.join(download_dir, name)
+        with open(path, "wb") as f:
+            for chunk in response.iter_content(chunk_size=1024 * 1024):
+                if chunk:
+                    f.write(chunk)
+    return name
 
 
 def create_driver(download_dir, headless):
@@ -94,7 +124,7 @@ def main():
 
         uploads = driver.find_elements(By.CSS_SELECTOR, ".upload")
         buttons = driver.find_elements(By.CSS_SELECTOR, "a.button.download_btn, a.download_btn")
-        expected = 0
+        download_urls = []
 
         for i, button in enumerate(buttons):
             version = ""
@@ -110,37 +140,41 @@ def main():
             if version and version != tag:
                 continue
 
-            driver.execute_script("arguments[0].click();", button)
-            expected += 1
-            time.sleep(2)
-            try:
-                dismiss = driver.find_element(By.CSS_SELECTOR, "#lightbox_container .close_btn, #lightbox_container button")
-                if dismiss.is_displayed():
-                    dismiss.click()
-            except NoSuchElementException:
-                pass
-            time.sleep(1)
+            href = button.get_attribute("href")
+            if href:
+                download_urls.append(href)
 
-        if expected == 0:
-            expected = len(buttons)
+        if not download_urls:
+            for button in buttons:
+                href = button.get_attribute("href")
+                if href:
+                    download_urls.append(href)
 
-        last_percent = -1
-        deadline = time.time() + 900
-        while time.time() < deadline:
-            files = os.listdir(download_dir)
-            completed = [f for f in files if not f.endswith(".crdownload")]
-            if expected > 0:
-                percent = min(100, int(len(completed) * 100 / expected))
-                if percent != last_percent:
-                    print(f"{percent}%", flush=True)
-                    last_percent = percent
-            if files and not any(f.endswith(".crdownload") for f in files) and len(files) >= expected:
-                break
-            time.sleep(1)
-        else:
-            raise TimeoutException("Timed out waiting for downloads")
+        cookies = driver.get_cookies()
+        user_agent = driver.execute_script("return navigator.userAgent")
     finally:
         driver.quit()
+
+    session = requests.Session()
+    session.headers.update({"User-Agent": user_agent})
+    for cookie in cookies:
+        session.cookies.set(cookie.get("name"), cookie.get("value"), domain=cookie.get("domain"), path=cookie.get("path"))
+
+    expected = len(download_urls)
+    completed = 0
+    last_percent = -1
+    if expected == 0:
+        return
+
+    with ThreadPoolExecutor(max_workers=min(4, expected)) as executor:
+        futures = [executor.submit(download_file, session, url, download_dir) for url in download_urls]
+        for future in as_completed(futures):
+            future.result()
+            completed += 1
+            percent = min(100, int(completed * 100 / expected))
+            if percent != last_percent:
+                print(f"{percent}%", flush=True)
+                last_percent = percent
 
     for name in os.listdir(download_dir):
         renamed = name.lower().replace("[android]", "").replace("[pre-alpha]", "").replace("-unstable", "").replace(f"[v{tag}]", "")
